@@ -12,7 +12,7 @@ from scipy.spatial import cKDTree
 import multiprocess as mp
 import h5py
 
-rho_2=1057/2
+mu = 0.0035
 
 def integrate_data(data):
     """Integrate point and cell data.
@@ -191,7 +191,7 @@ if __name__ == "__main__":
             for p in processes:
                 p.join()
                 Ve_avg += output.get()
-            Ve_avg = rho_2*Ve_avg
+            Ve_avg = mu*Ve_avg
             newlist = ["{}".format(case_name.split('_')[-1]), Ve_avg, tsteps]
             writer.writerow(newlist)
         print('completed Ve convergence')
