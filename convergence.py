@@ -246,7 +246,7 @@ if __name__ == "__main__":
             for p in processes:
                 p.join()
                 Ve_avg += output.get()
-            Ve_avg = rho_2*Ve_avg
+            Ve_avg = mu*Ve_avg
             newlist = ["{}".format(case_name.split('_')[-1]), Ve_avg]
             writer.writerow(newlist)
         print('completed Ve interpolated convergence')
