@@ -64,8 +64,8 @@ def L2_norm(outfolder, case_names, writer2):
         dofs = len(surf.points)
         #have to interpolate to high surf
         interpolated = high_surf.sample(surf)
-        l2_norm = np.sum((interpolated.point_arrays['wss_avg']-high_surf.point_arrays['wss_avg'])**2)/l2_high
-        l2_gradient_norm = np.sum((interpolated.point_arrays['wssg_avg']-high_surf.point_arrays['wssg_avg'])**2)/l2_high_gradient
+        l2_norm = math.sqrt(np.sum((interpolated.point_arrays['wss_avg']-high_surf.point_arrays['wss_avg'])**2)/l2_high)
+        l2_gradient_norm = math.sqrt(np.sum((interpolated.point_arrays['wssg_avg']-high_surf.point_arrays['wssg_avg'])**2)/l2_high_gradient)
         writer2.writerow([dofs, l2_norm, l2_gradient_norm])
 
 def get_u(u_file):
