@@ -75,18 +75,19 @@ def get_u(u_file):
 
 def compute_Ve(case_name, tsteps, mesh, up_files, output):
     Ve_avg = 0
+    newmesh = mesh.copy()
     #do about 100 tsteps for each to start
     for idx, u_file in enumerate(up_files):
         if idx % 10 == 0:
             print(idx)
 
-        mesh.point_arrays['u'] = get_u(u_file)
+        newmesh.point_arrays['u'] = get_u(u_file)
 
-        mesh = mesh.compute_derivative(scalars="u", gradient=True, qcriterion=False, faster=False)
-        J = mesh.point_arrays['gradient'].reshape(-1, 3, 3)
+        newmesh = newmesh.compute_derivative(scalars="u", gradient=True, qcriterion=False, faster=False)
+        J = newmesh.point_arrays['gradient'].reshape(-1, 3, 3)
         D = J + np.transpose(J, axes=(0,2,1))
 
-        mesh.point_arrays['Ve'] = np.sum(np.sum(D*D, axis = 2), axis=1) #double dot product
+        newmesh.point_arrays['Ve'] = np.sum(np.sum(D*D, axis = 2), axis=1) #double dot product
         volume_integrated = integrate_data(mesh)
 
         Ve = volume_integrated['Ve'][0]*1E-3 #because the derivatives are in mm
@@ -111,7 +112,7 @@ def compute_Ve_interp(case_name, tsteps, mesh, mesh_i, up_files, output):
         D = J + np.transpose(J, axes=(0,2,1))
 
         newmesh.point_arrays['Ve'] = np.sum(np.sum(D*D, axis = 2), axis=1) #double dot product
-        volume_integrated = integrate_data(mesh)
+        volume_integrated = integrate_data(newmesh)
 
         Ve = volume_integrated['Ve'][0]*1E-3 #because the derivatives are in mm
         Ve_avg += Ve/tsteps
@@ -134,22 +135,24 @@ if __name__ == "__main__":
         outfile2 = open(file2, 'w', encoding='UTF8', newline='')
         writer2 = csv.writer(outfile2) #writer for wss & wssg
         for case_name in case_names:
-            results = folder+'/'+ case_name + '/results/'
-            results_folder = Path((results + os.listdir(results)[0])) #results folder eg. results/art_
-            print(results + os.listdir(results)[0])
-            main_folder = Path(results_folder).parents[1]
-            dd = Dataset(results_folder)
-            splits = case_name.split('_')
-            seg_name = 'PTSeg'+ splits[1] +'_' + splits[-1]
-            vtu_file = Path(main_folder/ ('mesh/' + seg_name + '.vtu'))
-            dd = dd.assemble_mesh().assemble_surface(mesh_file=vtu_file) 
+            if not (outfolder/(case_name + '_data.vtp')).exists():
+                results = folder+'/'+ case_name + '/results/'
+                results_folder = Path((results + os.listdir(results)[0])) #results folder eg. results/art_
+                print(results + os.listdir(results)[0])
+                main_folder = Path(results_folder).parents[1]
+                dd = Dataset(results_folder)
+                splits = case_name.split('_')
+                seg_name = 'PTSeg'+ splits[1] +'_' + splits[-1]
+                vtu_file = Path(main_folder/ ('mesh/' + seg_name + '.vtu'))
+                dd = dd.assemble_mesh().assemble_surface(mesh_file=vtu_file) 
 
-            #WSS averages at each node
-            dd = average_WSS(dd)
-            #WSS gradients at each node
-            dd = average_WSSG(dd, outfolder, case_name) 
+                #WSS averages at each node
+                dd = average_WSS(dd)
+                #WSS gradients at each node
+                dd = average_WSSG(dd, outfolder, case_name) 
         #get L2 norms of WSS and WSSG
         L2_norm(outfolder, case_names, writer2)
+        outfile2.close()
         print('completed wss convergence')
 
     #it seems dumb but actually having two loops here is better
@@ -191,9 +194,11 @@ if __name__ == "__main__":
             for p in processes:
                 p.join()
                 Ve_avg += output.get()
-            Ve_avg = mu*Ve_avg
+            Ve_avg = 0.5*mu*Ve_avg
             newlist = ["{}".format(case_name.split('_')[-1]), Ve_avg, tsteps]
             writer.writerow(newlist)
+            outfile1.flush()
+        outfile1.close()
         print('completed Ve convergence')
     
 
@@ -217,6 +222,7 @@ if __name__ == "__main__":
 
         #Parallel implementation of Ve calculation
         for case_name in case_names:
+            #if ('ultraultralow' in case_name) or ('med' in case_name) or ('high' in case_name):
             results = folder+'/'+ case_name + '/results/'
             results_folder = Path((results + os.listdir(results)[0])) #results folder eg. results/art_
             print(results + os.listdir(results)[0])
@@ -246,9 +252,11 @@ if __name__ == "__main__":
             for p in processes:
                 p.join()
                 Ve_avg += output.get()
-            Ve_avg = mu*Ve_avg
+            Ve_avg = 0.5*mu*Ve_avg
             newlist = ["{}".format(case_name.split('_')[-1]), Ve_avg]
             writer.writerow(newlist)
+            outfile2.flush()
+        outfile2.close()
         print('completed Ve interpolated convergence')
     
 
